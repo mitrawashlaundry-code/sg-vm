@@ -1,15 +1,25 @@
 export default {
   async fetch(request, env) {
-    const targetUrl = new URL(request.url);
+    const url = new URL(request.url);
     
-    // Alihkan request langsung ke AIO Server Singapura (IP Statis Resmi)
-    targetUrl.protocol = "http:";
-    targetUrl.hostname = "34.1.202.11";
-    targetUrl.port = "80";
+    // Cloudflare Pages melarang fetch langsung ke IP bare (Error 1003).
+    // Maka kita jembatani lewat Cloudflare Quick Tunnel HTTPS yang sudah aktif di server:
+    const backendHost = "lang-folders-structures-directly.trycloudflare.com";
+    
+    const targetUrl = new URL(request.url);
+    targetUrl.protocol = "https:";
+    targetUrl.hostname = backendHost;
+    targetUrl.port = "";
+
+    // Salin headers dan sesuaikan Host header
+    const newHeaders = new Headers(request.headers);
+    newHeaders.set("Host", backendHost);
+    newHeaders.set("X-Forwarded-Host", url.hostname);
+    newHeaders.set("X-Forwarded-Proto", "https");
 
     const proxyRequest = new Request(targetUrl.toString(), {
       method: request.method,
-      headers: request.headers,
+      headers: newHeaders,
       body: request.body,
       redirect: "manual"
     });
